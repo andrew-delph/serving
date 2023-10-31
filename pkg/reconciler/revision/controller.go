@@ -75,9 +75,7 @@ func newControllerWithOptions(
 	deploymentInformer := deploymentinformer.Get(ctx)
 	imageInformer := imageinformer.Get(ctx)
 	paInformer := painformer.Get(ctx)
-
 	podsInformer := podinformer.Get(ctx)
-	logger.Infof("andrew	podsInformer2>>>>>>> %+v", podsInformer)
 
 	c := &Reconciler{
 		kubeclient:    kubeclient.Get(ctx),
@@ -137,7 +135,6 @@ func newControllerWithOptions(
 	deploymentInformer.Informer().AddEventHandler(handleMatchingControllers)
 	paInformer.Informer().AddEventHandler(handleMatchingControllers)
 
-	// TESTING PODS FOR THE CONTROLLER
 	podsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: pkgreconciler.LabelExistsFilterFunc(serving.RevisionLabelKey),
 		Handler:    controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("", serving.RevisionLabelKey)),
