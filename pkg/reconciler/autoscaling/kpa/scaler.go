@@ -167,11 +167,7 @@ func durationMax(d1, d2 time.Duration) time.Duration {
 
 func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscaler,
 	sks *netv1alpha1.ServerlessService, desiredScale int32) (int32, bool) {
-
-	// myCond := pa.Status.GetCondition(autoscalingv1alpha1.PodAutoscalerConditionActive)
-	// fmt.Printf("andrewscale handleScale Reachability %v desiredScale %d %v myCond: %v %v\n", pa.Spec.Reachability, desiredScale, myCond.Type, myCond.Status, myCond.Reason)
 	if desiredScale != 0 {
-		fmt.Printf("andrewscale desiredScale != 0\n")
 		return desiredScale, true
 	}
 
@@ -187,7 +183,6 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 	cfgAS := cfgs.Autoscaler
 
 	if !cfgAS.EnableScaleToZero {
-		fmt.Printf("andrewscale !cfgAS.EnableScaleToZero\n")
 		return 1, true
 	}
 	cfgD := cfgs.Deployment
@@ -197,25 +192,22 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 	} else {
 		activationTimeout = cfgD.ProgressDeadline + activationTimeoutBuffer
 	}
+
 	now := time.Now()
 	logger := logging.FromContext(ctx)
-	tempMsg := pa.Status.GetCondition(autoscalingv1alpha1.PodAutoscalerConditionActive).Message
 	switch {
 	case pa.Status.IsActivating(): // Active=Unknown
-		fmt.Printf("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< andrewscale handleScale Active=Unknown %s\n", tempMsg)
 		// If we are stuck activating for longer than our progress deadline, presume we cannot succeed and scale to 0.
 		if pa.Status.CanFailActivation(now, activationTimeout) {
 			logger.Info("Activation has timed out after ", activationTimeout)
 			return desiredScale, true
-		}
-		if pa.Spec.Reachability == "Unreachable" {
+		} else if pa.Spec.Reachability == "Unreachable" {
 			fmt.Printf("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< andrewscale Unreachable SCALE TO 0\n")
 			return desiredScale, true
 		}
 		ks.enqueueCB(pa, activationTimeout)
 		return scaleUnknown, false
 	case pa.Status.IsActive(): // Active=True
-		fmt.Printf("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< andrewscale Active=True %s\n", tempMsg)
 		// Don't scale-to-zero if the PA is active
 		// but return `(0, false)` to mark PA inactive, instead.
 		sw := aresources.StableWindow(pa, cfgAS)
@@ -238,7 +230,6 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 		ks.enqueueCB(pa, sw-af)
 		return 1, true
 	default: // Active=False
-		fmt.Printf("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< andrewscale Active=False %s\n", tempMsg)
 		var (
 			err error
 			r   = true
@@ -248,7 +239,6 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 			// if TBC is -1 activator is guaranteed to already be in the path.
 			// Otherwise, probe to make sure Activator is in path.
 			r, err = ks.activatorProbe(pa, ks.transport)
-			fmt.Printf("andrewscale Probing activator = %v, err = %v\n", r, err)
 			logger.Infof("Probing activator = %v, err = %v", r, err)
 		}
 
@@ -357,14 +347,10 @@ func (ks *scaler) scale(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscal
 		}
 		min = intMax(initialScale, min)
 	}
-
-	// fmt.Printf("andrewscale before applyBounds %d\n", desiredScale)
 	if newScale := applyBounds(min, max, desiredScale); newScale != desiredScale {
 		logger.Debugf("Adjusting desiredScale to meet the min and max bounds before applying: %d -> %d", desiredScale, newScale)
 		desiredScale = newScale
 	}
-
-	// fmt.Printf("andrewscale after applyBounds %d\n", desiredScale)
 
 	desiredScale, shouldApplyScale := ks.handleScaleToZero(ctx, pa, sks, desiredScale)
 	if !shouldApplyScale {
