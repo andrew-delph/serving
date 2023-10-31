@@ -31,6 +31,7 @@ import (
 	fakekubeclient "knative.dev/pkg/client/injection/kube/client/fake"
 	fakedeploymentinformer "knative.dev/pkg/client/injection/kube/informers/apps/v1/deployment/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/configmap/fake"
+	fakepodsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/pod/fake"
 	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/service/fake"
 	"knative.dev/pkg/ptr"
 	fakeservingclient "knative.dev/serving/pkg/client/injection/client/fake"
@@ -83,7 +84,7 @@ func newTestController(t *testing.T, configs []*corev1.ConfigMap, opts ...reconc
 	[]controller.Informer,
 	*controller.Impl,
 	*configmap.ManualWatcher) {
-
+	println(fakepodsinformer.Get)
 	ctx, cancel, informers := SetupFakeContextWithCancel(t)
 	t.Cleanup(cancel) // cancel is reentrant, so if necessary callers can call it directly, if needed.
 	configMapWatcher := &configmap.ManualWatcher{Namespace: system.Namespace()}
