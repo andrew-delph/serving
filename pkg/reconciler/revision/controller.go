@@ -24,7 +24,6 @@ import (
 
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	cachingclient "knative.dev/caching/pkg/client/injection/client"
@@ -138,34 +137,12 @@ func newControllerWithOptions(
 	deploymentInformer.Informer().AddEventHandler(handleMatchingControllers)
 	paInformer.Informer().AddEventHandler(handleMatchingControllers)
 
-	podsFilter := cache.FilteringResourceEventHandler{
-		FilterFunc: func(obj interface{}) bool {
+	// TESTING PODS FOR THE CONTROLLER
+	podsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: pkgreconciler.LabelExistsFilterFunc(serving.RevisionLabelKey),
+		Handler:    controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("", serving.RevisionLabelKey)),
+	})
 
-			tempFunc := pkgreconciler.LabelExistsFilterFunc(serving.RevisionLabelKey)
-
-			temp := tempFunc(obj)
-			// logger.Infof("andrew >>>>  podsFilter LabelExistsFilterFunc = %v", temp)
-
-			if temp {
-				// logger.Infof("andrew >>>>  podsFilter type: %+v", reflect.TypeOf(obj))
-
-				// logger.Infof("andrew >>>>  podsFilter obj: %+v", obj)
-
-				if pod, ok := obj.(*corev1.Pod); ok {
-					logger.Infof("andrew >>>>  podsFilter It's a Pod: %+v", pod.Name)
-				} else {
-					logger.Infof("andrew >>>>  podsFilter Not a Pod.")
-				}
-
-			}
-
-			return temp
-		},
-		Handler: controller.HandleAll(impl.EnqueueLabelOfNamespaceScopedResource("", serving.RevisionLabelKey)),
-	}
-	podsInformer.Informer().AddEventHandler(podsFilter)
-
-	logger.Infof("andrew >>>>  podsInformer2.Informer().AddEventHandler podsFilter = %v", podsFilter)
 	// We don't watch for changes to Image because we don't incorporate any of its
 	// properties into our own status and should work completely in the absence of
 	// a functioning Image controller.
