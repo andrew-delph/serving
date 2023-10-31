@@ -202,7 +202,7 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 			logger.Info("Activation has timed out after ", activationTimeout)
 			return desiredScale, true
 		} else if pa.Spec.Reachability == "Unreachable" {
-			fmt.Printf("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< andrewscale Unreachable SCALE TO 0\n")
+			logger.Info("PA is Unreachable, it is ok to scale to 0.")
 			return desiredScale, true
 		}
 		ks.enqueueCB(pa, activationTimeout)
