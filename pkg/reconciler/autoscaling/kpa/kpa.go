@@ -122,7 +122,9 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	// the scaleTargetRef based on it.
 	want, err := c.scaler.scale(ctx, pa, sks, decider.Status.DesiredScale)
 	if err != nil {
-		return fmt.Errorf("error scaling target: %w", err)
+		err = fmt.Errorf("error scaling target: %w", err)
+		fmt.Printf("andrew %v\n", err)
+		return err
 	}
 
 	fmt.Printf("andrewz want %d DesiredScale %d name %s\n", want, decider.Status.DesiredScale, pa.Name)
