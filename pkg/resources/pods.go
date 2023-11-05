@@ -17,6 +17,7 @@ limitations under the License.
 package resources
 
 import (
+	"encoding/json"
 	"sort"
 	"time"
 
@@ -43,16 +44,41 @@ func NewPodAccessor(lister corev1listers.PodLister, namespace, revisionName stri
 		}),
 	}
 }
+func StructToJSONString(i interface{}) string {
+	data, err := json.Marshal(i)
+	if err != nil {
+		return err.Error()
+	}
+	return string(data)
+}
 
 // PodCountsByState returns number of pods for the revision grouped by their state, that is
 // of interest to knative (e.g. ignoring failed or terminated pods).
-func (pa PodAccessor) PodCountsByState() (ready, notReady, pending, terminating int, err error) {
+func (pa PodAccessor) PodCountsByState() (ready, notReady, pending, terminating, crashing int, err error) {
 	pods, err := pa.podsLister.List(pa.selector)
 	if err != nil {
-		return 0, 0, 0, 0, err
+		return 0, 0, 0, 0, 0, err
 	}
-
 	for _, p := range pods {
+		// fmt.Printf("andrew %+v\n", p.Name)
+		for _, cs := range p.Status.ContainerStatuses {
+			// fmt.Printf("andrew cs.State: %+v \n", StructToJSONString(cs.State))
+			// if cs.Name == "user-container" {
+			// 	fmt.Printf("andrewp %+v cs.State T: %+v W: %+v\n", cs.Name, cs.State.Terminated != nil, cs.State.Waiting != nil)
+			// }
+			if cs.Name != "user-container" {
+				continue
+			}
+
+			if cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff" {
+				// fmt.Printf("andrewp CrashLoopBackOff\n")
+				crashing++
+			} else if cs.State.Terminated != nil {
+				crashing++
+				// fmt.Printf("andrewp T: %+v \n", cs.State.Terminated)
+			}
+		}
+		// fmt.Printf("andrew p.Status %+v \n", StructToJSONString(p.Status))
 		switch p.Status.Phase {
 		case corev1.PodPending:
 			pending++
@@ -71,18 +97,18 @@ func (pa PodAccessor) PodCountsByState() (ready, notReady, pending, terminating 
 		}
 	}
 
-	return ready, notReady, pending, terminating, nil
+	return ready, notReady, pending, terminating, crashing, nil
 }
 
 // ReadyCount implements EndpointsCounter.
 func (pa PodAccessor) ReadyCount() (int, error) {
-	r, _, _, _, err := pa.PodCountsByState()
+	r, _, _, _, _, err := pa.PodCountsByState()
 	return r, err
 }
 
 // NotReadyCount implements EndpointsCounter.
 func (pa PodAccessor) NotReadyCount() (int, error) {
-	_, nr, _, _, err := pa.PodCountsByState()
+	_, nr, _, _, _, err := pa.PodCountsByState()
 	return nr, err
 }
 

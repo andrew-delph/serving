@@ -143,8 +143,10 @@ func (a *autoscaler) Scale(logger *zap.SugaredLogger, now time.Time) ScaleResult
 
 	spec := a.currentSpec()
 	originalReadyPodsCount, err := a.podCounter.ReadyCount()
+	// PodCountsByState
 	// If the error is NotFound, then presume 0.
 	if err != nil && !apierrors.IsNotFound(err) {
+		fmt.Printf("andrew1 autoscaler.go err = %v\n", err)
 		logger.Errorw("Failed to get ready pod count via K8S Lister", zap.Error(err))
 		return invalidSR
 	}
@@ -164,6 +166,7 @@ func (a *autoscaler) Scale(logger *zap.SugaredLogger, now time.Time) ScaleResult
 	}
 
 	if err != nil {
+		// fmt.Printf("andrew2 autoscaler.go err = %v\n", err)
 		if errors.Is(err, metrics.ErrNoData) {
 			logger.Debug("No data to scale on yet")
 		} else {
@@ -197,7 +200,7 @@ func (a *autoscaler) Scale(logger *zap.SugaredLogger, now time.Time) ScaleResult
 	// We want to keep desired pod count in the  [maxScaleDown, maxScaleUp] range.
 	desiredStablePodCount := int32(math.Min(math.Max(dspc, maxScaleDown), maxScaleUp))
 	desiredPanicPodCount := int32(math.Min(math.Max(dppc, maxScaleDown), maxScaleUp))
-
+	// fmt.Printf("andrew a.deciderSpec.ActivationScale %v\n", a.deciderSpec.ActivationScale)
 	//	If ActivationScale > 1, then adjust the desired pod counts
 	if a.deciderSpec.ActivationScale > 1 {
 		if dspc > 0 && a.deciderSpec.ActivationScale > desiredStablePodCount {
@@ -306,6 +309,8 @@ func (a *autoscaler) Scale(logger *zap.SugaredLogger, now time.Time) ScaleResult
 			targetRequestConcurrencyM.M(spec.TargetValue),
 		)
 	}
+
+	// fmt.Printf("andrew ScaleResult DesiredPodCount %d\n", desiredPodCount)
 
 	return ScaleResult{
 		DesiredPodCount:     desiredPodCount,

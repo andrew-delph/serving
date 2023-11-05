@@ -270,7 +270,7 @@ func TestPendingTerminatingCounts(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			createPods(test.pods)
 
-			_, _, pending, terminating, err := podCounter.PodCountsByState()
+			_, _, pending, terminating, _, err := podCounter.PodCountsByState()
 			if got, want := (err != nil), test.wantErr; got != want {
 				t.Errorf("WantErr = %v, want: %v, err: %v", got, want, err)
 			}

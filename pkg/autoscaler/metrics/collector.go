@@ -17,6 +17,7 @@ limitations under the License.
 package metrics
 
 import (
+	"encoding/json"
 	"errors"
 	"sync"
 	"time"
@@ -179,6 +180,13 @@ func (c *MetricCollector) Inform(event types.NamespacedName) {
 		c.watcher(event)
 	}
 }
+func StructToJSONString(i interface{}) string {
+	data, err := json.Marshal(i)
+	if err != nil {
+		return err.Error()
+	}
+	return string(data)
+}
 
 // StableAndPanicConcurrency returns both the stable and the panic concurrency.
 // It may truncate metric buckets as a side-effect.
@@ -188,12 +196,15 @@ func (c *MetricCollector) StableAndPanicConcurrency(key types.NamespacedName, no
 
 	collection, exists := c.collections[key]
 	if !exists {
+		// fmt.Printf("andrew StableAndPanicConcurrency !exists\n")
 		return 0, 0, ErrNotCollecting
 	}
 
 	if collection.concurrencyBuckets.IsEmpty(now) && collection.currentMetric().Spec.ScrapeTarget != "" {
+		// fmt.Printf("andrew StableAndPanicConcurrency 2 \n")
 		return 0, 0, ErrNoData
 	}
+	// fmt.Printf("andrew StableAndPanicConcurrency 3\n")
 	return collection.concurrencyBuckets.WindowAverage(now),
 		collection.concurrencyPanicBuckets.WindowAverage(now),
 		nil

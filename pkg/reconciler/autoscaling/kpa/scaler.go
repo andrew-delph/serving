@@ -167,7 +167,11 @@ func durationMax(d1, d2 time.Duration) time.Duration {
 
 func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscaler,
 	sks *netv1alpha1.ServerlessService, desiredScale int32) (int32, bool) {
+	logger := logging.FromContext(ctx)
+	logger.Infof("andrews handleScaleToZero %s", pa.Name)
+
 	if desiredScale != 0 {
+		logger.Info("andrews desiredScale != 0")
 		return desiredScale, true
 	}
 
@@ -183,6 +187,7 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 	cfgAS := cfgs.Autoscaler
 
 	if !cfgAS.EnableScaleToZero {
+		logger.Info("andrews !cfgAS.EnableScaleToZero")
 		return 1, true
 	}
 	cfgD := cfgs.Deployment
@@ -194,9 +199,10 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 	}
 
 	now := time.Now()
-	logger := logging.FromContext(ctx)
+
 	switch {
 	case pa.Status.IsActivating(): // Active=Unknown
+		logger.Info("andrews Active=Unknown")
 		// If we are stuck activating for longer than our progress deadline, presume we cannot succeed and scale to 0.
 		if pa.Status.CanFailActivation(now, activationTimeout) {
 			logger.Info("Activation has timed out after ", activationTimeout)
@@ -205,6 +211,7 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 		ks.enqueueCB(pa, activationTimeout)
 		return scaleUnknown, false
 	case pa.Status.IsActive(): // Active=True
+		logger.Info("andrews Active=True")
 		// Don't scale-to-zero if the PA is active
 		// but return `(0, false)` to mark PA inactive, instead.
 		sw := aresources.StableWindow(pa, cfgAS)
@@ -227,6 +234,7 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 		ks.enqueueCB(pa, sw-af)
 		return 1, true
 	default: // Active=False
+		logger.Info("andrews Active=False")
 		var (
 			err error
 			r   = true
@@ -328,12 +336,17 @@ func (ks *scaler) scale(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscal
 
 	if desiredScale < 0 && !pa.Status.IsActivating() {
 		logger.Debug("Metrics are not yet being collected.")
+		logger.Infof("andrew scale exit %s desiredScale %d", pa.Name, desiredScale)
 		return desiredScale, nil
 	}
 
 	min, max := pa.ScaleBounds(asConfig)
 	initialScale := kparesources.GetInitialScale(asConfig, pa)
 	// Log reachability as quoted string, since default value is "".
+
+	fmt.Printf("andrewzz MinScale = %d, c.Min = %d, DesiredScale = %d Reachable = %q name = %s\n",
+		min, asConfig.MinScale, desiredScale, pa.Spec.Reachability, pa.Name)
+
 	logger.Debugf("MinScale = %d, MaxScale = %d, InitialScale = %d, DesiredScale = %d Reachable = %q",
 		min, max, initialScale, desiredScale, pa.Spec.Reachability)
 	// If initial scale has been attained, ignore the initialScale altogether.

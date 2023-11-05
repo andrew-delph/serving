@@ -60,6 +60,7 @@ type podCounts struct {
 	notReady    int
 	pending     int
 	terminating int
+	crashing    int
 }
 
 // Reconciler tracks PAs and right sizes the ScaleTargetRef based on the
@@ -84,6 +85,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	defer cancel()
 
 	logger := logging.FromContext(ctx)
+	// logger.Info("andrew ReconcileKind")
 
 	// We need the SKS object in order to optimize scale to zero
 	// performance. It is OK if SKS is nil at this point.
@@ -110,6 +112,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	if err != nil {
 		return fmt.Errorf("error reconciling Decider: %w", err)
 	}
+	fmt.Printf("andrew decider.Status.DesiredScale %d \n", decider.Status.DesiredScale)
 
 	if err := c.ReconcileMetric(ctx, pa, resolveScrapeTarget(ctx, pa)); err != nil {
 		return fmt.Errorf("error reconciling Metric: %w", err)
@@ -121,6 +124,8 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	if err != nil {
 		return fmt.Errorf("error scaling target: %w", err)
 	}
+
+	fmt.Printf("andrewz want %d DesiredScale %d name %s\n", want, decider.Status.DesiredScale, pa.Name)
 
 	mode := nv1alpha1.SKSOperationModeProxy
 
@@ -146,7 +151,8 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 
 	// Compare the desired and observed resources to determine our situation.
 	podCounter := resourceutil.NewPodAccessor(c.podsLister, pa.Namespace, pa.Labels[serving.RevisionLabelKey])
-	ready, notReady, pending, terminating, err := podCounter.PodCountsByState()
+	ready, notReady, pending, terminating, crashing, err := podCounter.PodCountsByState()
+	// fmt.Printf("andrewc crashing %d\n", crashing)
 	if err != nil {
 		return fmt.Errorf("error getting pod counts: %w", err)
 	}
@@ -183,6 +189,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 		notReady:    notReady,
 		pending:     pending,
 		terminating: terminating,
+		crashing:    crashing,
 	}
 	logger.Infof("Observed pod counts=%#v", pc)
 	computeStatus(ctx, pa, pc, logger)
@@ -227,6 +234,7 @@ func computeStatus(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscaler, p
 }
 
 func reportMetrics(pa *autoscalingv1alpha1.PodAutoscaler, pc podCounts) {
+	// fmt.Printf("andrew reportMetrics!!! %+v\n", pc)
 	serviceLabel := pa.Labels[serving.ServiceLabelKey] // This might be empty.
 	configLabel := pa.Labels[serving.ConfigurationLabelKey]
 
@@ -263,19 +271,23 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 	if pc.ready >= minReady && pa.Status.ServiceName != "" {
 		pa.Status.MarkScaleTargetInitialized()
 	}
-
+	// fmt.Printf("andrew pd: %+v minReady: %v\n", pc, minReady)
 	switch {
 	// Need to check for minReady = 0 because in the initialScale 0 case, pc.want will be -1.
 	case pc.want == 0 || minReady == 0:
 		if pa.Status.IsActivating() && minReady > 0 {
-			// We only ever scale to zero while activating if we fail to activate within the progress deadline.
 			pa.Status.MarkInactive("TimedOut", "The target could not be activated.")
 		} else {
+			fmt.Printf("andrew noTrafficReason1 want %d minReady %d\n", pc.want, minReady)
 			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
 		}
 
 	case pc.ready < minReady:
-		if pc.want > 0 || !pa.Status.IsInactive() {
+		if pc.crashing > 0 {
+			fmt.Printf("andrew MarkInactive crashing: %d %s\n", pc.crashing, pa.Name)
+			pa.Status.MarkInactive("CRASHING", "The target is crashing.")
+		} else if pc.want > 0 || !pa.Status.IsInactive() {
+			// fmt.Printf("andrew Queued crashing: %d\n", pc.crashing)
 			pa.Status.MarkActivating(
 				"Queued", "Requests to the target are being buffered as resources are provisioned.")
 		} else {
@@ -286,6 +298,7 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 			// still need to set it again. Otherwise reconciliation will fail with NewObservedGenFailure
 			// because we cannot go through one iteration of reconciliation without setting
 			// some status.
+			fmt.Printf("andrew noTrafficReason2\n")
 			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
 		}
 
