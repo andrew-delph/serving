@@ -203,7 +203,7 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 			return desiredScale, true
 		} else if pa.Spec.Reachability == "Unreachable" {
 			logger.Info("PA is Unreachable, it is ok to scale to 0.")
-			return desiredScale, true
+			// return desiredScale, true
 		}
 		ks.enqueueCB(pa, activationTimeout)
 		return scaleUnknown, false
