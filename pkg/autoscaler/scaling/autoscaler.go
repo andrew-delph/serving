@@ -162,8 +162,11 @@ func (a *autoscaler) Scale(logger *zap.SugaredLogger, now time.Time) ScaleResult
 		metricName = autoscaling.Concurrency // concurrency is used by default
 		observedStableValue, observedPanicValue, err = a.metricClient.StableAndPanicConcurrency(metricKey, now)
 	}
+	// fmt.Printf("andrew name = %v spec.Reachable %v\n", a.revision, spec.Reachable)
 
-	if err != nil {
+	if err != nil && spec.Reachable { // TODO enable this?
+		// if err != nil {
+		// fmt.Printf("andrew name = %v err = %v\n", a.revision, err)
 		if errors.Is(err, metrics.ErrNoData) {
 			logger.Debug("No data to scale on yet")
 		} else {
@@ -306,6 +309,7 @@ func (a *autoscaler) Scale(logger *zap.SugaredLogger, now time.Time) ScaleResult
 			targetRequestConcurrencyM.M(spec.TargetValue),
 		)
 	}
+	// fmt.Printf("andrew name = %v desiredPodCount %v\n", a.revision, desiredPodCount)
 
 	return ScaleResult{
 		DesiredPodCount:     desiredPodCount,

@@ -108,10 +108,12 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	pa.Status.MetricsServiceName = sks.Status.PrivateServiceName
 	decider, err := c.reconcileDecider(ctx, pa)
 	if err != nil {
+		fmt.Printf("andrew error reconciling Decider\n")
 		return fmt.Errorf("error reconciling Decider: %w", err)
 	}
 
 	if err := c.ReconcileMetric(ctx, pa, resolveScrapeTarget(ctx, pa)); err != nil {
+		fmt.Printf("andrew error reconciling Metric\n")
 		return fmt.Errorf("error reconciling Metric: %w", err)
 	}
 
@@ -119,8 +121,11 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	// the scaleTargetRef based on it.
 	want, err := c.scaler.scale(ctx, pa, sks, decider.Status.DesiredScale)
 	if err != nil {
+		fmt.Printf("andrew error scaling target\n")
 		return fmt.Errorf("error scaling target: %w", err)
 	}
+
+	fmt.Printf("andrew DesiredScale %5v want %5v\n", decider.Status.DesiredScale, want)
 
 	mode := nv1alpha1.SKSOperationModeProxy
 
@@ -170,8 +175,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 		logger.Debug("SKS is ready, marking SKS status ready")
 		pa.Status.MarkSKSReady()
 	} else {
-		logger.Debug("SKS is not ready, marking SKS status not ready")
-		pa.Status.MarkSKSNotReady(sks.Status.GetCondition(nv1alpha1.ServerlessServiceConditionReady).GetMessage())
+		pa.Status.MarkSKSNotReady(sks.Status.GetCondition(nv1alpha1.ServerlessServiceConditionReady).GetMessage() + "z")
 	}
 
 	logger.Infof("PA scale got=%d, want=%d, desiredPods=%d ebc=%d", ready, want,
@@ -276,8 +280,15 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 
 	case pc.ready < minReady:
 		if pc.want > 0 || !pa.Status.IsInactive() {
-			pa.Status.MarkActivating(
-				"Queued", "Requests to the target are being buffered as resources are provisioned.")
+			// fmt.Printf("andrewz SKSReady = %v\n", pa.Status.GetCondition("SKSReady"))
+			if pa.IsUnreachable() {
+				pa.Status.MarkInactive(
+					"TEST", "Its unreachable")
+			} else {
+				pa.Status.MarkActivating(
+					"Queued", "Requests to the target are being buffered as resources are provisioned.")
+			}
+
 		} else {
 			// This is for the initialScale 0 case. In the first iteration, minReady is 0,
 			// but for the following iterations, minReady is 1. pc.want will continue being

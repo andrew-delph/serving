@@ -183,6 +183,7 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 	cfgAS := cfgs.Autoscaler
 
 	if !cfgAS.EnableScaleToZero {
+		fmt.Printf("andrew !cfgAS.EnableScaleToZero\n")
 		return 1, true
 	}
 	cfgD := cfgs.Deployment
@@ -193,6 +194,8 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 		activationTimeout = cfgD.ProgressDeadline + activationTimeoutBuffer
 	}
 
+	fmt.Printf("andrew Active %v\n", pa.Status.GetCondition("Active").Status)
+	// fmt.Printf("andrew SKSReady %v\n", pa.Status.GetCondition("SKSReady"))
 	now := time.Now()
 	logger := logging.FromContext(ctx)
 	switch {
@@ -201,9 +204,9 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 		if pa.Status.CanFailActivation(now, activationTimeout) {
 			logger.Info("Activation has timed out after ", activationTimeout)
 			return desiredScale, true
-		} else if pa.Spec.Reachability == "Unreachable" {
+		} else if pa.IsUnreachable() {
 			logger.Info("PA is Unreachable, it is ok to scale to 0.")
-			// return desiredScale, true
+			return desiredScale, true
 		}
 		ks.enqueueCB(pa, activationTimeout)
 		return scaleUnknown, false
@@ -330,6 +333,7 @@ func (ks *scaler) scale(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscal
 	logger := logging.FromContext(ctx)
 
 	if desiredScale < 0 && !pa.Status.IsActivating() {
+		fmt.Printf("andrew Metrics are not yet being collected.\n")
 		logger.Debug("Metrics are not yet being collected.")
 		return desiredScale, nil
 	}
@@ -354,11 +358,13 @@ func (ks *scaler) scale(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscal
 
 	desiredScale, shouldApplyScale := ks.handleScaleToZero(ctx, pa, sks, desiredScale)
 	if !shouldApplyScale {
+		fmt.Printf("andrew !shouldApplyScale\n")
 		return desiredScale, nil
 	}
 
 	ps, err := resources.GetScaleResource(pa.Namespace, pa.Spec.ScaleTargetRef, ks.listerFactory)
 	if err != nil {
+		fmt.Printf("andrew GetScaleResource\n")
 		return desiredScale, fmt.Errorf("failed to get scale target %v: %w", pa.Spec.ScaleTargetRef, err)
 	}
 
@@ -367,6 +373,7 @@ func (ks *scaler) scale(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscal
 		currentScale = *ps.Spec.Replicas
 	}
 	if desiredScale == currentScale {
+		fmt.Printf("andrew desiredScale == currentScale\n")
 		return desiredScale, nil
 	}
 

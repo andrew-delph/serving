@@ -187,6 +187,14 @@ func (pa *PodAutoscaler) IsReady() bool {
 		pas.GetCondition(PodAutoscalerConditionReady).IsTrue()
 }
 
+func (pa *PodAutoscaler) IsUnreachable() bool {
+	return pa.Spec.Reachability == "Unreachable"
+}
+
+func (pa *PodAutoscaler) IsReachable() bool {
+	return pa.Spec.Reachability == "Reachable"
+}
+
 // IsActive returns true if the pod autoscaler has finished scaling.
 func (pas *PodAutoscalerStatus) IsActive() bool {
 	return pas.GetCondition(PodAutoscalerConditionActive).IsTrue()
@@ -222,7 +230,21 @@ func (pas *PodAutoscalerStatus) MarkSKSReady() {
 
 // MarkSKSNotReady marks the PA condition that denotes SKS is not yet ready.
 func (pas *PodAutoscalerStatus) MarkSKSNotReady(mes string) {
-	podCondSet.Manage(pas).MarkUnknown(PodAutoscalerConditionSKSReady, "NotReady", mes)
+	// TODO MarkFalse
+	podCondSet.Manage(pas).MarkFalse(PodAutoscalerConditionSKSReady, "NotReady", mes)
+}
+
+// MarkSKSNotReady marks the PA condition that denotes SKS is not yet ready.
+func (pas *PodAutoscalerStatus) MarkSKSUnknown(mes string) {
+	podCondSet.Manage(pas).MarkUnknown(PodAutoscalerConditionSKSReady, "Unknown", mes)
+}
+
+func (pas *PodAutoscalerStatus) IsSKSReady() bool {
+	return pas.GetCondition(PodAutoscalerConditionSKSReady).IsTrue()
+}
+
+func (pas *PodAutoscalerStatus) IsSKSNotReady() bool {
+	return pas.GetCondition(PodAutoscalerConditionSKSReady).IsFalse()
 }
 
 // GetCondition gets the condition `t`.
