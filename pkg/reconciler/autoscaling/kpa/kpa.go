@@ -269,15 +269,16 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 		if pa.Status.IsActivating() && minReady > 0 {
 			// We only ever scale to zero while activating if we fail to activate within the progress deadline.
 			pa.Status.MarkInactive("TimedOut", "The target could not be activated.")
-		} else {
+		} else if !pa.Status.IsInactive() {
 			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
 		}
 
 	case pc.ready < minReady:
+		// fmt.Printf("andrew SKSReady = %v\n", pa.Status.GetCondition("SKSReady"))
 		if pc.want > 0 || !pa.Status.IsInactive() {
 			if pa.IsUnreachable() {
 				pa.Status.MarkInactive(
-					"TEST", "Its unreachable")
+					"Failed", "The target failed.")
 			} else {
 				pa.Status.MarkActivating(
 					"Queued", "Requests to the target are being buffered as resources are provisioned.")
