@@ -292,7 +292,13 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 			// still need to set it again. Otherwise reconciliation will fail with NewObservedGenFailure
 			// because we cannot go through one iteration of reconciliation without setting
 			// some status.
-			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
+			if pa.Status.IsInactive() {
+				cond := pa.Status.GetCondition("Active")
+				pa.Status.MarkInactive(cond.Reason, cond.Message)
+			} else {
+				pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
+			}
+
 		}
 
 	case pc.ready >= minReady:
