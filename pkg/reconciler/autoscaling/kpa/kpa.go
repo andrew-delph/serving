@@ -108,12 +108,10 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	pa.Status.MetricsServiceName = sks.Status.PrivateServiceName
 	decider, err := c.reconcileDecider(ctx, pa)
 	if err != nil {
-		fmt.Printf("andrew error reconciling Decider\n")
 		return fmt.Errorf("error reconciling Decider: %w", err)
 	}
 
 	if err := c.ReconcileMetric(ctx, pa, resolveScrapeTarget(ctx, pa)); err != nil {
-		fmt.Printf("andrew error reconciling Metric\n")
 		return fmt.Errorf("error reconciling Metric: %w", err)
 	}
 
@@ -121,11 +119,8 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	// the scaleTargetRef based on it.
 	want, err := c.scaler.scale(ctx, pa, sks, decider.Status.DesiredScale)
 	if err != nil {
-		fmt.Printf("andrew error scaling target\n")
 		return fmt.Errorf("error scaling target: %w", err)
 	}
-
-	fmt.Printf("andrew DesiredScale %5v want %5v\n", decider.Status.DesiredScale, want)
 
 	mode := nv1alpha1.SKSOperationModeProxy
 
@@ -280,7 +275,6 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 
 	case pc.ready < minReady:
 		if pc.want > 0 || !pa.Status.IsInactive() {
-			// fmt.Printf("andrewz SKSReady = %v\n", pa.Status.GetCondition("SKSReady"))
 			if pa.IsUnreachable() {
 				pa.Status.MarkInactive(
 					"TEST", "Its unreachable")
