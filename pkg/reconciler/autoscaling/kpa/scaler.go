@@ -201,9 +201,6 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 		if pa.Status.CanFailActivation(now, activationTimeout) {
 			logger.Info("Activation has timed out after ", activationTimeout)
 			return desiredScale, true
-		} else if pa.IsUnreachable() {
-			logger.Info("PA is Unreachable, it is ok to scale to 0.")
-			return desiredScale, true
 		}
 		ks.enqueueCB(pa, activationTimeout)
 		return scaleUnknown, false
@@ -250,6 +247,8 @@ func (ks *scaler) handleScaleToZero(ctx context.Context, pa *autoscalingv1alpha1
 			// Most conservative check, if it passes we're good.
 			lastPodTimeout := lastPodRetention(pa, cfgAS)
 			lastPodMaxTimeout := durationMax(cfgAS.ScaleToZeroGracePeriod, lastPodTimeout)
+
+			fmt.Printf("andrew lastPodTimeout %v lastPodMaxTimeout %v InactiveFor %v\n", lastPodTimeout, lastPodMaxTimeout, pa.Status.InactiveFor(now))
 			// If we have been inactive for this long, we can scale to 0!
 			if pa.Status.InactiveFor(now) >= lastPodMaxTimeout {
 				return desiredScale, true
