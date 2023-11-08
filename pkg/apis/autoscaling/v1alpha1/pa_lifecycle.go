@@ -230,13 +230,7 @@ func (pas *PodAutoscalerStatus) MarkSKSReady() {
 
 // MarkSKSNotReady marks the PA condition that denotes SKS is not yet ready.
 func (pas *PodAutoscalerStatus) MarkSKSNotReady(mes string) {
-	// TODO MarkFalse
-	podCondSet.Manage(pas).MarkFalse(PodAutoscalerConditionSKSReady, "NotReady", mes)
-}
-
-// MarkSKSNotReady marks the PA condition that denotes SKS is not yet ready.
-func (pas *PodAutoscalerStatus) MarkSKSUnknown(mes string) {
-	podCondSet.Manage(pas).MarkUnknown(PodAutoscalerConditionSKSReady, "Unknown", mes)
+	podCondSet.Manage(pas).MarkUnknown(PodAutoscalerConditionSKSReady, "NotReady", mes)
 }
 
 func (pas *PodAutoscalerStatus) IsSKSReady() bool {
