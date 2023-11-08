@@ -299,7 +299,7 @@ func TestMakePA(t *testing.T) {
 					Name:       "batman-deployment",
 				},
 				ProtocolType: networking.ProtocolH2C,
-				Reachability: autoscalingv1alpha1.ReachabilityUnreachable,
+				Reachability: autoscalingv1alpha1.ReachabilityReachable,
 			},
 		},
 	}, {
@@ -361,7 +361,7 @@ func TestMakePA(t *testing.T) {
 					Name:       "batman-deployment",
 				},
 				ProtocolType: networking.ProtocolH2C,
-				Reachability: autoscalingv1alpha1.ReachabilityUnreachable,
+				Reachability: autoscalingv1alpha1.ReachabilityReachable,
 			},
 		},
 	}}
@@ -370,7 +370,7 @@ func TestMakePA(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got := MakePA(test.rev)
 			if !cmp.Equal(got, test.want) {
-				t.Error("MakePA (-want, +got) =", cmp.Diff(test.want, got))
+				t.Errorf("name = %q MakePA (-want, +got) = %+v", test.name, cmp.Diff(test.want, got))
 			}
 		})
 	}
