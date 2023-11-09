@@ -1428,7 +1428,6 @@ func TestReconcileDeciderCreatesAndDeletes(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	//testeing
 	ctx, cancel, _ := SetupFakeContextWithCancel(t, func(ctx context.Context) context.Context {
 		return filteredinformerfactory.WithSelectors(ctx, serving.RevisionUID)
 	})
