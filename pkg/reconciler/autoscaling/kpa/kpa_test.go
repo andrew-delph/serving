@@ -1428,6 +1428,7 @@ func TestReconcileDeciderCreatesAndDeletes(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
+	//testeing
 	ctx, cancel, _ := SetupFakeContextWithCancel(t, func(ctx context.Context) context.Context {
 		return filteredinformerfactory.WithSelectors(ctx, serving.RevisionUID)
 	})
@@ -1437,12 +1438,14 @@ func TestUpdate(t *testing.T) {
 	ctl := NewController(ctx, newConfigWatcher(), fakeDeciders)
 
 	rev := newTestRevision(testNamespace, testRevision)
+	labels := rev.Labels
+	println(labels)
 	fakeservingclient.Get(ctx).ServingV1().Revisions(testNamespace).Create(ctx, rev, metav1.CreateOptions{})
 	fakerevisioninformer.Get(ctx).Informer().GetIndexer().Add(rev)
 
 	newDeployment(ctx, t, fakedynamicclient.Get(ctx), testRevision+"-deployment", 3)
 
-	pod := makeReadyPods(1, testNamespace, testRevision)[0].(*corev1.Pod)
+	pod := makeReadyPods(1, testNamespace, string(rev.UID))[0].(*corev1.Pod)
 	fakekubeclient.Get(ctx).CoreV1().Pods(testNamespace).Create(ctx, pod, metav1.CreateOptions{})
 	fakefilteredpodsinformer.Get(ctx, serving.RevisionUID).Informer().GetIndexer().Add(pod)
 
@@ -1773,6 +1776,7 @@ func newTestRevision(namespace, name string) *v1.Revision {
 		ObjectMeta: metav1.ObjectMeta{
 			SelfLink:  fmt.Sprintf("/apis/ela/v1/namespaces/%s/revisions/%s", namespace, name),
 			Name:      name,
+			UID:       types.UID(name),
 			Namespace: namespace,
 			Annotations: map[string]string{
 				autoscaling.ClassAnnotationKey: autoscaling.KPA,
@@ -1793,7 +1797,7 @@ func makeReadyPods(num int, ns, n string) []runtime.Object {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      n + strconv.Itoa(i),
 				Namespace: ns,
-				Labels:    map[string]string{serving.RevisionLabelKey: n},
+				Labels:    map[string]string{serving.RevisionLabelKey: n, serving.RevisionUID: n},
 			},
 			Status: corev1.PodStatus{
 				Phase: corev1.PodRunning,
