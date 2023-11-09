@@ -145,7 +145,7 @@ func (c *Reconciler) ReconcileKind(ctx context.Context, pa *autoscalingv1alpha1.
 	}
 
 	// Compare the desired and observed resources to determine our situation.
-	podCounter := resourceutil.NewPodAccessor(c.podsLister, pa.Namespace, pa.Labels[serving.RevisionLabelKey])
+	podCounter := resourceutil.NewPodAccessor(c.podsLister, pa.Namespace, pa.Labels[serving.RevisionUID])
 	ready, notReady, pending, terminating, err := podCounter.PodCountsByState()
 	if err != nil {
 		return fmt.Errorf("error getting pod counts: %w", err)

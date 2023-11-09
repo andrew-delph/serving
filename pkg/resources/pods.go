@@ -35,11 +35,11 @@ type PodAccessor struct {
 
 // NewPodAccessor creates a PodAccessor implementation that counts
 // pods for a namespace/revision.
-func NewPodAccessor(lister corev1listers.PodLister, namespace, revisionName string) PodAccessor {
+func NewPodAccessor(lister corev1listers.PodLister, namespace, revisionUID string) PodAccessor {
 	return PodAccessor{
 		podsLister: lister.Pods(namespace),
 		selector: labels.SelectorFromSet(labels.Set{
-			serving.RevisionLabelKey: revisionName,
+			serving.RevisionUID: revisionUID,
 		}),
 	}
 }
