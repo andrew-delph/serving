@@ -855,7 +855,7 @@ func makePods(ctx context.Context, prefix string, n int, startTime metav1.Time) 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      prefix + strconv.Itoa(i),
 				Namespace: testNamespace,
-				Labels:    map[string]string{serving.RevisionLabelKey: testRevision},
+				Labels:    map[string]string{serving.RevisionLabelKey: testRevision, serving.RevisionUID: testRevision},
 			},
 			Status: corev1.PodStatus{
 				StartTime: &startTime,
