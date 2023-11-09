@@ -1438,8 +1438,6 @@ func TestUpdate(t *testing.T) {
 	ctl := NewController(ctx, newConfigWatcher(), fakeDeciders)
 
 	rev := newTestRevision(testNamespace, testRevision)
-	labels := rev.Labels
-	println(labels)
 	fakeservingclient.Get(ctx).ServingV1().Revisions(testNamespace).Create(ctx, rev, metav1.CreateOptions{})
 	fakerevisioninformer.Get(ctx).Informer().GetIndexer().Add(rev)
 
