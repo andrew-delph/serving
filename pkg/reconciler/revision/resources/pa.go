@@ -57,6 +57,11 @@ func reachability(rev *v1.Revision) autoscalingv1alpha1.ReachabilityType {
 		v1.RevisionConditionContainerHealthy,
 	}
 
+	routingState := rev.GetRoutingState()
+	if routingState == v1.RoutingStateActive {
+		return autoscalingv1alpha1.ReachabilityReachable
+	}
+
 	for _, cond := range conds {
 		if c := rev.Status.GetCondition(cond); c != nil && c.IsFalse() {
 			return autoscalingv1alpha1.ReachabilityUnreachable
@@ -64,8 +69,6 @@ func reachability(rev *v1.Revision) autoscalingv1alpha1.ReachabilityType {
 	}
 
 	switch rev.GetRoutingState() {
-	case v1.RoutingStateActive:
-		return autoscalingv1alpha1.ReachabilityReachable
 	case v1.RoutingStateReserve:
 		return autoscalingv1alpha1.ReachabilityUnreachable
 	default:
