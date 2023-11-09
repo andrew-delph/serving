@@ -268,7 +268,12 @@ func statsScraperFactoryFunc(podLister corev1listers.PodLister, usePassthroughLb
 			return nil, fmt.Errorf("label %q not found or empty in Metric %s", serving.RevisionLabelKey, metric.Name)
 		}
 
-		podAccessor := resources.NewPodAccessor(podLister, metric.Namespace, revisionName)
+		revisionUID := metric.Labels[serving.RevisionUID]
+		if revisionName == "" {
+			return nil, fmt.Errorf("label %q not found or empty in Metric %s", serving.RevisionUID, metric.Name)
+		}
+
+		podAccessor := resources.NewPodAccessor(podLister, metric.Namespace, revisionUID)
 		return asmetrics.NewStatsScraper(metric, revisionName, podAccessor, usePassthroughLb, meshMode, logger), nil
 	}
 }
