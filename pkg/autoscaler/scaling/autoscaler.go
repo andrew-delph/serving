@@ -163,8 +163,7 @@ func (a *autoscaler) Scale(logger *zap.SugaredLogger, now time.Time) ScaleResult
 		observedStableValue, observedPanicValue, err = a.metricClient.StableAndPanicConcurrency(metricKey, now)
 	}
 
-	if err != nil && spec.Reachable { // TODO enable this?
-		// if err != nil {
+	if err != nil && spec.Reachable {
 		if errors.Is(err, metrics.ErrNoData) {
 			logger.Debug("No data to scale on yet")
 		} else {
