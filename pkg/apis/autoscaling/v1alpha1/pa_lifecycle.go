@@ -233,14 +233,6 @@ func (pas *PodAutoscalerStatus) MarkSKSNotReady(mes string) {
 	podCondSet.Manage(pas).MarkUnknown(PodAutoscalerConditionSKSReady, "NotReady", mes)
 }
 
-func (pas *PodAutoscalerStatus) IsSKSReady() bool {
-	return pas.GetCondition(PodAutoscalerConditionSKSReady).IsTrue()
-}
-
-func (pas *PodAutoscalerStatus) IsSKSNotReady() bool {
-	return pas.GetCondition(PodAutoscalerConditionSKSReady).IsFalse()
-}
-
 // GetCondition gets the condition `t`.
 func (pas *PodAutoscalerStatus) GetCondition(t apis.ConditionType) *apis.Condition {
 	return podCondSet.Manage(pas).GetCondition(t)
