@@ -444,7 +444,7 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: "foo/fix-mutated-pa-fail",
 	}, {
-		Name: "surface deployment timeout",
+		Name: "surface deployment timeout - route active", // TODO make route reserve test
 		// Test the propagation of ProgressDeadlineExceeded from Deployment.
 		// This initializes the world to the stable state after its first reconcile,
 		// but changes the user deployment to have a ProgressDeadlineExceeded
@@ -454,7 +454,7 @@ func TestReconcile(t *testing.T) {
 			Revision("foo", "deploy-timeout",
 				WithRoutingState(v1.RoutingStateActive, fc),
 				WithLogURL, MarkActive),
-			pa("foo", "deploy-timeout", WithReachabilityReachable),
+			pa("foo", "deploy-timeout", WithReachabilityUnknown),
 			timeoutDeploy(deploy(t, "foo", "deploy-timeout"), "I timed out!"),
 			image("foo", "deploy-timeout"),
 		},
@@ -468,9 +468,37 @@ func TestReconcile(t *testing.T) {
 				WithRevisionObservedGeneration(1)),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: pa("foo", "deploy-timeout", WithReachabilityUnreachable),
+			Object: pa("foo", "deploy-timeout", WithReachabilityReachable),
 		}},
 		Key: "foo/deploy-timeout",
+	}, {
+		Name: "revision failure because replicaset and deployment failed",
+		// This test defines a Revision InProgress with status Deploying but with a
+		// Deployment with a ReplicaSet failure, so the wanted status update is for
+		// the Deployment FailedCreate error to bubble up to the Revision
+		Objects: []runtime.Object{
+			Revision("foo", "deploy-replicaset-failure",
+				WithLogURL, MarkActivating("Deploying", ""),
+				WithRoutingState(v1.RoutingStatePending, fc),
+				withDefaultContainerStatuses(),
+				WithRevisionObservedGeneration(1),
+				MarkContainerHealthyUnknown("Deploying"),
+			),
+			pa("foo", "deploy-replicaset-failure", WithReachabilityUnreachable),
+			replicaFailureDeploy(deploy(t, "foo", "deploy-replicaset-failure"), "I ReplicaSet failed!"),
+			image("foo", "deploy-replicaset-failure"),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: Revision("foo", "deploy-replicaset-failure",
+				WithLogURL, MarkResourcesUnavailable("FailedCreate", "I ReplicaSet failed!"),
+				withDefaultContainerStatuses(),
+				WithRoutingState(v1.RoutingStatePending, fc),
+				MarkContainerHealthyUnknown("Deploying"),
+				WithRevisionObservedGeneration(1),
+				MarkActivating("Deploying", ""),
+			),
+		}},
+		Key: "foo/deploy-replicaset-failure",
 	}, {
 		Name: "surface replica failure",
 		// Test the propagation of FailedCreate from Deployment.
@@ -479,7 +507,7 @@ func TestReconcile(t *testing.T) {
 		// It then verifies that Reconcile propagates this into the status of the Revision.
 		Objects: []runtime.Object{
 			Revision("foo", "deploy-replica-failure",
-				WithRoutingState(v1.RoutingStateActive, fc),
+				WithRoutingState(v1.RoutingStateReserve, fc),
 				WithLogURL, MarkActive),
 			pa("foo", "deploy-replica-failure", WithReachabilityReachable),
 			replicaFailureDeploy(deploy(t, "foo", "deploy-replica-failure"), "I replica failed!"),
@@ -488,7 +516,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: Revision("foo", "deploy-replica-failure",
 				WithLogURL, allUnknownConditions,
-				WithRoutingState(v1.RoutingStateActive, fc),
+				WithRoutingState(v1.RoutingStateReserve, fc),
 				// When the revision is reconciled after a Deployment has
 				// timed out, we should see it marked with the FailedCreate state.
 				MarkResourcesUnavailable("FailedCreate", "I replica failed!"),
@@ -504,7 +532,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			Revision("foo", "pull-backoff",
 				WithLogURL, MarkActivating("Deploying", ""),
-				WithRoutingState(v1.RoutingStateActive, fc),
+				WithRoutingState(v1.RoutingStateReserve, fc),
 			),
 			pa("foo", "pull-backoff", WithReachabilityReachable), // pa can't be ready since deployment times out.
 			pod(t, "foo", "pull-backoff", WithWaitingContainer("pull-backoff", "ImagePullBackoff", "can't pull it")),
@@ -514,7 +542,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: Revision("foo", "pull-backoff",
 				WithLogURL, allUnknownConditions,
-				WithRoutingState(v1.RoutingStateActive, fc),
+				WithRoutingState(v1.RoutingStateReserve, fc),
 				MarkResourcesUnavailable("ImagePullBackoff", "can't pull it"), withDefaultContainerStatuses(), WithRevisionObservedGeneration(1)),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
@@ -529,7 +557,7 @@ func TestReconcile(t *testing.T) {
 		// that Reconcile propagates this into the status of the Revision.
 		Objects: []runtime.Object{
 			Revision("foo", "pod-error",
-				WithRoutingState(v1.RoutingStateActive, fc),
+				WithRoutingState(v1.RoutingStateReserve, fc),
 				WithLogURL, allUnknownConditions, MarkActive),
 			pa("foo", "pod-error", WithReachabilityReachable), // PA can't be ready, since no traffic.
 			pod(t, "foo", "pod-error", WithFailingContainer("pod-error", 5, "I failed man!")),
@@ -539,7 +567,7 @@ func TestReconcile(t *testing.T) {
 		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: Revision("foo", "pod-error",
 				WithLogURL, allUnknownConditions,
-				WithRoutingState(v1.RoutingStateActive, fc),
+				WithRoutingState(v1.RoutingStateReserve, fc),
 				MarkContainerExiting(5, v1.RevisionContainerExitingMessage("I failed man!")),
 				withDefaultContainerStatuses(),
 				WithRevisionObservedGeneration(1),
@@ -556,7 +584,7 @@ func TestReconcile(t *testing.T) {
 		// that Reconcile propagates this into the status of the Revision.
 		Objects: []runtime.Object{
 			Revision("foo", "pod-schedule-error",
-				WithRoutingState(v1.RoutingStateActive, fc),
+				WithRoutingState(v1.RoutingStateReserve, fc),
 				WithLogURL, allUnknownConditions, MarkActive),
 			pa("foo", "pod-schedule-error", WithReachabilityReachable), // PA can't be ready, since no traffic.
 			pod(t, "foo", "pod-schedule-error", WithUnschedulableContainer("Insufficient energy", "Unschedulable")),
@@ -567,7 +595,7 @@ func TestReconcile(t *testing.T) {
 			Object: Revision("foo", "pod-schedule-error",
 				WithLogURL,
 				allUnknownConditions,
-				WithRoutingState(v1.RoutingStateActive, fc),
+				WithRoutingState(v1.RoutingStateReserve, fc),
 				MarkResourcesUnavailable("Insufficient energy", "Unschedulable"),
 				withDefaultContainerStatuses(),
 				WithRevisionObservedGeneration(1),

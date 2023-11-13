@@ -188,11 +188,11 @@ func (pa *PodAutoscaler) IsReady() bool {
 }
 
 func (pa *PodAutoscaler) IsUnreachable() bool {
-	return pa.Spec.Reachability == "Unreachable"
+	return pa.Spec.Reachability == ReachabilityUnreachable
 }
 
 func (pa *PodAutoscaler) IsReachable() bool {
-	return pa.Spec.Reachability == "Reachable"
+	return pa.Spec.Reachability == ReachabilityReachable
 }
 
 // IsActive returns true if the pod autoscaler has finished scaling.

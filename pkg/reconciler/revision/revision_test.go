@@ -50,7 +50,7 @@ import (
 
 	netcfg "knative.dev/networking/pkg/config"
 	"knative.dev/pkg/apis"
-	fakepodsinformer "knative.dev/pkg/client/injection/kube/informers/core/v1/pod/fake"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/pod/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
@@ -84,8 +84,6 @@ func newTestController(t *testing.T, configs []*corev1.ConfigMap, opts ...reconc
 	[]controller.Informer,
 	*controller.Impl,
 	*configmap.ManualWatcher) {
-
-	println(fakepodsinformer.Get)
 
 	ctx, cancel, informers := SetupFakeContextWithCancel(t)
 	t.Cleanup(cancel) // cancel is reentrant, so if necessary callers can call it directly, if needed.

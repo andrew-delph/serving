@@ -270,15 +270,19 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 		if pa.Status.IsActivating() && minReady > 0 {
 			// We only ever scale to zero while activating if we fail to activate within the progress deadline.
 			pa.Status.MarkInactive("TimedOut", "The target could not be activated.")
-		} else if !pa.Status.IsInactive() {
+		} else if pa.Status.IsInactive() {
+			// If the pa is scaled to 0 because "Failed", we dont want to overwrite the condition.
+			// and it needs to be copied to avoid NewObservedGenFailure
+			cond := pa.Status.GetCondition("Active")
+			pa.Status.MarkInactive(cond.Reason, cond.Message)
+		} else {
 			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
 		}
 
 	case pc.ready < minReady:
 		if pc.want > 0 || !pa.Status.IsInactive() {
 			if pa.IsUnreachable() {
-				pa.Status.MarkInactive(
-					"Failed", "The target failed.")
+				pa.Status.MarkInactive("Unreachable", "The target does not have an active routing state.")
 			} else {
 				pa.Status.MarkActivating(
 					"Queued", "Requests to the target are being buffered as resources are provisioned.")
@@ -292,6 +296,7 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 			// because we cannot go through one iteration of reconciliation without setting
 			// some status.
 			if pa.Status.IsInactive() {
+				// If the pa is scaled to 0 because "Failed", we dont want to overwrite the condition.
 				cond := pa.Status.GetCondition("Active")
 				pa.Status.MarkInactive(cond.Reason, cond.Message)
 			} else {
@@ -303,6 +308,7 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 		if pc.want > 0 || !pa.Status.IsInactive() {
 			pa.Status.MarkActive()
 		}
+
 	}
 }
 
