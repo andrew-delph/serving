@@ -444,7 +444,7 @@ func TestReconcile(t *testing.T) {
 		},
 		Key: "foo/fix-mutated-pa-fail",
 	}, {
-		Name: "surface deployment timeout",
+		Name: "surface deployment timeout - route active", // TODO make route reserve test
 		// Test the propagation of ProgressDeadlineExceeded from Deployment.
 		// This initializes the world to the stable state after its first reconcile,
 		// but changes the user deployment to have a ProgressDeadlineExceeded
@@ -454,7 +454,7 @@ func TestReconcile(t *testing.T) {
 			Revision("foo", "deploy-timeout",
 				WithRoutingState(v1.RoutingStateActive, fc),
 				WithLogURL, MarkActive),
-			pa("foo", "deploy-timeout", WithReachabilityReachable),
+			pa("foo", "deploy-timeout", WithReachabilityUnknown),
 			timeoutDeploy(deploy(t, "foo", "deploy-timeout"), "I timed out!"),
 			image("foo", "deploy-timeout"),
 		},
@@ -468,7 +468,7 @@ func TestReconcile(t *testing.T) {
 				WithRevisionObservedGeneration(1)),
 		}},
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
-			Object: pa("foo", "deploy-timeout", WithReachabilityUnreachable),
+			Object: pa("foo", "deploy-timeout", WithReachabilityReachable),
 		}},
 		Key: "foo/deploy-timeout",
 	}, {
