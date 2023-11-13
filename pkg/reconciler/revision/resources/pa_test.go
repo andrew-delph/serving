@@ -242,7 +242,7 @@ func TestMakePA(t *testing.T) {
 				Reachability: autoscalingv1alpha1.ReachabilityUnknown,
 			}},
 	}, {
-		name: "failed deployment",
+		name: "failed deployment - active route",
 		rev: &v1.Revision{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "blah",
@@ -299,12 +299,73 @@ func TestMakePA(t *testing.T) {
 					Name:       "batman-deployment",
 				},
 				ProtocolType: networking.ProtocolH2C,
+				Reachability: autoscalingv1alpha1.ReachabilityReachable,
+			},
+		},
+	}, {
+		name: "failed deployment - active route",
+		rev: &v1.Revision{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "blah",
+				Name:      "batman",
+				UID:       "4321",
+				Labels: map[string]string{
+					serving.RoutingStateLabelKey: string(v1.RoutingStateReserve),
+				},
+			},
+			Spec: v1.RevisionSpec{
+				ContainerConcurrency: ptr.Int64(0),
+				PodSpec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Ports: []corev1.ContainerPort{{
+							Name:     "h2c",
+							HostPort: int32(443),
+						}},
+					}},
+				},
+			},
+			Status: v1.RevisionStatus{
+				Status: duckv1.Status{
+					Conditions: duckv1.Conditions{{
+						Type:   v1.RevisionConditionResourcesAvailable,
+						Status: corev1.ConditionFalse,
+					}},
+				},
+			},
+		},
+		want: &autoscalingv1alpha1.PodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:   "blah",
+				Name:        "batman",
+				Annotations: map[string]string{},
+				Labels: map[string]string{
+					serving.RevisionLabelKey: "batman",
+					serving.RevisionUID:      "4321",
+					AppLabelKey:              "batman",
+				},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion:         v1.SchemeGroupVersion.String(),
+					Kind:               "Revision",
+					Name:               "batman",
+					UID:                "4321",
+					Controller:         ptr.Bool(true),
+					BlockOwnerDeletion: ptr.Bool(true),
+				}},
+			},
+			Spec: autoscalingv1alpha1.PodAutoscalerSpec{
+				ContainerConcurrency: 0,
+				ScaleTargetRef: corev1.ObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "batman-deployment",
+				},
+				ProtocolType: networking.ProtocolH2C,
 				Reachability: autoscalingv1alpha1.ReachabilityUnreachable,
 			},
 		},
 	}, {
 		// Crashlooping container that never starts
-		name: "failed container",
+		name: "failed container - active route",
 		rev: &v1.Revision{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "blah",
@@ -312,6 +373,68 @@ func TestMakePA(t *testing.T) {
 				UID:       "4321",
 				Labels: map[string]string{
 					serving.RoutingStateLabelKey: string(v1.RoutingStateActive),
+				},
+			},
+			Spec: v1.RevisionSpec{
+				ContainerConcurrency: ptr.Int64(0),
+				PodSpec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Ports: []corev1.ContainerPort{{
+							Name:     "h2c",
+							HostPort: int32(443),
+						}},
+					}},
+				},
+			},
+			Status: v1.RevisionStatus{
+				Status: duckv1.Status{
+					Conditions: duckv1.Conditions{{
+						Type:   v1.RevisionConditionContainerHealthy,
+						Status: corev1.ConditionFalse,
+					}},
+				},
+			},
+		},
+		want: &autoscalingv1alpha1.PodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace:   "blah",
+				Name:        "batman",
+				Annotations: map[string]string{},
+				Labels: map[string]string{
+					serving.RevisionLabelKey: "batman",
+					serving.RevisionUID:      "4321",
+					AppLabelKey:              "batman",
+				},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion:         v1.SchemeGroupVersion.String(),
+					Kind:               "Revision",
+					Name:               "batman",
+					UID:                "4321",
+					Controller:         ptr.Bool(true),
+					BlockOwnerDeletion: ptr.Bool(true),
+				}},
+			},
+			Spec: autoscalingv1alpha1.PodAutoscalerSpec{
+				ContainerConcurrency: 0,
+				ScaleTargetRef: corev1.ObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "batman-deployment",
+				},
+				ProtocolType: networking.ProtocolH2C,
+				Reachability: autoscalingv1alpha1.ReachabilityReachable,
+			},
+		},
+	}, {
+		// Crashlooping container that never starts
+		name: "failed container - reserve route",
+		rev: &v1.Revision{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "blah",
+				Name:      "batman",
+				UID:       "4321",
+				Labels: map[string]string{
+					serving.RoutingStateLabelKey: string(v1.RoutingStateReserve),
 				},
 			},
 			Spec: v1.RevisionSpec{
