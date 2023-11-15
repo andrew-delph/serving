@@ -425,7 +425,6 @@ func TestMakePA(t *testing.T) {
 			},
 		},
 	}, {
-		// Crashlooping container that never starts
 		name: "failed container - reserve route",
 		rev: &v1.Revision{
 			ObjectMeta: metav1.ObjectMeta{
