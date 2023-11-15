@@ -242,7 +242,7 @@ func TestMakePA(t *testing.T) {
 				Reachability: autoscalingv1alpha1.ReachabilityUnknown,
 			}},
 	}, {
-		name: "failed deployment - active route",
+		name: "failed deployment - active route unavailable",
 		rev: &v1.Revision{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "blah",
@@ -303,7 +303,7 @@ func TestMakePA(t *testing.T) {
 			},
 		},
 	}, {
-		name: "failed deployment - active route",
+		name: "failed deployment - reserve route unhealthy",
 		rev: &v1.Revision{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "blah",
@@ -365,7 +365,7 @@ func TestMakePA(t *testing.T) {
 		},
 	}, {
 		// Crashlooping container that never starts
-		name: "failed container - active route",
+		name: "failed container - active route unhealthy",
 		rev: &v1.Revision{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "blah",
