@@ -364,7 +364,6 @@ func TestMakePA(t *testing.T) {
 			},
 		},
 	}, {
-		// Crashlooping container that never starts
 		name: "failed container - active route unhealthy",
 		rev: &v1.Revision{
 			ObjectMeta: metav1.ObjectMeta{
