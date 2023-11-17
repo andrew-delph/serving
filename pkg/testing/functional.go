@@ -374,6 +374,7 @@ func WithSKSReady(sks *netv1alpha1.ServerlessService) {
 	WithPrivateService(sks)
 	WithPubService(sks)
 	sks.Status.MarkEndpointsReady()
+	sks.Status.MarkActivatorEndpointsPopulated()
 }
 
 // WithNumActivators sets the number of requested activators
