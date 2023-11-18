@@ -1184,115 +1184,82 @@ func TestReconcile(t *testing.T) {
 		WantUpdates: []clientgotesting.UpdateActionImpl{{
 			Object: defaultProxySKS,
 		}},
-	}}
-
-	table = TableTest{
-		// {
-		// 	Name: "zANDREW - test unreachable crashing - pa becomes Failed.",
-		// 	Key:  key,
-		// 	Ctx: context.WithValue(context.Background(), deciderKey{},
-		// 		decider(testNamespace, testRevision, -1 /* desiredScale */, 0 /* ebc */)),
-		// 	Objects: []runtime.Object{
-		// 		kpa(testNamespace,
-		// 			testRevision,
-		// 			WithReachabilityUnreachable,
-		// 			WithPAMetricsService(privateSvc),
-		// 			WithPASKSNotReady(noPrivateServiceName)),
-		// 		sks(testNamespace, testRevision, WithProxyMode, WithDeployRef(deployName), WithPrivateService, WithPubService),
-		// 		metric(testNamespace, testRevision),
-		// 		deploy(testNamespace, testRevision, func(d *appsv1.Deployment) {
-		// 			d.Spec.Replicas = ptr.Int32(1)
-		// 		}),
-		// 	},
-		// 	WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-		// 		Object: kpa(testNamespace, testRevision,
-		// 			WithNoTraffic("Failed", "The target failed."),
-		// 			withScales(0, -1),
-		// 			WithReachabilityUnreachable,
-		// 			WithPAMetricsService(privateSvc),
-		// 			WithObservedGeneration(1),
-		// 			WithPAStatusService(testRevision),
-		// 			WithPASKSNotReady(""),
-		// 		),
-		// 	}},
-		// },
-
-		{
-			Name: "zANDREW  - test unreachable crashing - deployment becomes 0",
-			Key:  key,
-			Ctx: context.WithValue(context.WithValue(context.Background(), asConfigKey{}, initialScaleZeroASConfig()), deciderKey{},
-				decider(testNamespace, testRevision, 0 /* desiredScale */, 0 /* ebc */)),
-			Objects: []runtime.Object{
-				kpa(testNamespace, testRevision,
-					WithNoTraffic("Failed", "The target failed."),
-					WithReachabilityUnreachable,
-					// WithPAMetricsService(privateSvc),
-					WithObservedGeneration(1),
-					WithPAStatusService(testRevision),
-					WithPASKSNotReady(""),
-					withScales(0, -1),
-				),
-				sks(
-					testNamespace,
-					testRevision,
-					WithProxyMode,
-					WithDeployRef(deployName),
-					WithPrivateService,
-					markActivatorEndpointsPopulated,
-					sksMarkOld,
-					// testingproxytime,
-				),
-				metric(testNamespace, testRevision),
-				deploy(testNamespace, testRevision, func(d *appsv1.Deployment) {
-					d.Spec.Replicas = ptr.Int32(1)
-				}),
-			},
-			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-				Object: kpa(testNamespace, testRevision,
-					WithNoTraffic("Failed", "The target failed."),
-					WithReachabilityUnreachable,
-					WithPAMetricsService(privateSvc),
-					WithObservedGeneration(1),
-					withScales(0, 0),
-					WithPASKSNotReady(""),
-				),
-			}},
-			WantPatches: []clientgotesting.PatchActionImpl{{
-				ActionImpl: clientgotesting.ActionImpl{
-					Namespace: testNamespace,
-				},
-				Name:  deployName,
-				Patch: []byte(`[{"op":"replace","path":"/spec/replicas","value":0}]`),
-			}},
+	}, {
+		Name: "unreachable crashing - pa becomes Failed.",
+		Key:  key,
+		Ctx: context.WithValue(context.Background(), deciderKey{},
+			decider(testNamespace, testRevision, -1 /* desiredScale */, 0 /* ebc */)),
+		Objects: []runtime.Object{
+			kpa(testNamespace,
+				testRevision,
+				WithReachabilityUnreachable,
+				WithPAMetricsService(privateSvc),
+				WithPASKSNotReady(noPrivateServiceName)),
+			sks(testNamespace, testRevision, WithProxyMode, WithDeployRef(deployName), WithPrivateService, WithPubService),
+			metric(testNamespace, testRevision),
+			deploy(testNamespace, testRevision, func(d *appsv1.Deployment) {
+				d.Spec.Replicas = ptr.Int32(1)
+			}),
 		},
-		// {
-		// 	Name: "ANDREW - test reachable scale to 0",
-		// 	Key:  key,
-		// 	Ctx: context.WithValue(context.Background(), deciderKey{},
-		// 		decider(testNamespace, testRevision, 0, /* desiredScale */
-		// 			0 /* ebc */)),
-		// 	Objects: []runtime.Object{
-		// 		kpa(testNamespace, testRevision, WithReachabilityReachable,
-		// 			WithPAMetricsService(privateSvc), WithPASKSNotReady(noPrivateServiceName)),
-		// 		// SKS won't be ready bc no ready endpoints, but private service name will be populated.
-		// 		sks(testNamespace, testRevision, WithProxyMode, WithDeployRef(deployName), WithPrivateService, WithPubService),
-		// 		metric(testNamespace, testRevision),
-		// 		deploy(testNamespace, testRevision, func(d *appsv1.Deployment) {
-		// 			d.Spec.Replicas = ptr.Int32(1)
-		// 		}),
-		// 	},
-		// 	WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
-		// 		Object: kpa(testNamespace, testRevision,
-		// 			WithPASKSNotReady(""),
-		// 			WithBufferedTraffic,
-		// 			withScales(0, -1),
-		// 			WithReachabilityReachable,
-		// 			WithPAMetricsService(privateSvc),
-		// 			WithObservedGeneration(1),
-		// 			WithPAStatusService(testRevision),
-		// 		),
-		// 	}},
-		// },
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: kpa(testNamespace, testRevision,
+				WithNoTraffic("Failed", "The target failed."),
+				withScales(0, -1),
+				WithReachabilityUnreachable,
+				WithPAMetricsService(privateSvc),
+				WithObservedGeneration(1),
+				WithPAStatusService(testRevision),
+				WithPASKSNotReady(""),
+			),
+		}},
+	}, {
+		Name: "unreachable crashing - deployment becomes 0",
+		Key:  key,
+		Ctx: context.WithValue(context.WithValue(context.Background(), asConfigKey{}, initialScaleZeroASConfig()), deciderKey{},
+			decider(testNamespace, testRevision, 0 /* desiredScale */, 0 /* ebc */)),
+		Objects: []runtime.Object{
+			kpa(testNamespace, testRevision,
+				WithNoTraffic("Failed", "The target failed."),
+				WithReachabilityUnreachable,
+				// WithPAMetricsService(privateSvc),
+				WithObservedGeneration(1),
+				WithPAStatusService(testRevision),
+				WithPASKSNotReady(""),
+				withScales(0, -1),
+			),
+			sks(
+				testNamespace,
+				testRevision,
+				WithProxyMode,
+				WithDeployRef(deployName),
+				WithPrivateService,
+				markActivatorEndpointsPopulated,
+				sksMarkOld,
+				// testingproxytime,
+			),
+			metric(testNamespace, testRevision),
+			deploy(testNamespace, testRevision, func(d *appsv1.Deployment) {
+				d.Spec.Replicas = ptr.Int32(1)
+			}),
+		},
+		WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
+			Object: kpa(testNamespace, testRevision,
+				WithNoTraffic("Failed", "The target failed."),
+				WithReachabilityUnreachable,
+				WithPAMetricsService(privateSvc),
+				WithObservedGeneration(1),
+				withScales(0, 0),
+				WithPASKSNotReady(""),
+			),
+		}},
+		WantPatches: []clientgotesting.PatchActionImpl{{
+			ActionImpl: clientgotesting.ActionImpl{
+				Namespace: testNamespace,
+			},
+			Name:  deployName,
+			Patch: []byte(`[{"op":"replace","path":"/spec/replicas","value":0}]`),
+		}},
+	},
 	}
 
 	table.Test(t, MakeFactory(func(ctx context.Context, listers *Listers, cmw configmap.Watcher) controller.Reconciler {
