@@ -218,6 +218,10 @@ func sksMarkOld(sks *nv1a1.ServerlessService) {
 	}
 }
 
+func markActivatorEndpointsPopulated(sks *nv1a1.ServerlessService) {
+	sks.Status.MarkActivatorEndpointsPopulated()
+}
+
 func kpaMarkOld(pa *autoscalingv1alpha1.PodAutoscaler) {
 	for i := range pa.Status.Conditions {
 		pa.Status.Conditions[i].LastTransitionTime = apis.VolatileTime{Inner: metav1.NewTime(time.Now().Add(-time.Hour))}
@@ -1233,7 +1237,9 @@ func TestReconcile(t *testing.T) {
 					testRevision,
 					WithProxyMode,
 					WithDeployRef(deployName),
-					WithPrivateService, WithPubService,
+					WithPrivateService,
+					WithPubService,
+					markActivatorEndpointsPopulated,
 					sksMarkOld,
 					// testingproxytime,
 				),
@@ -1245,12 +1251,12 @@ func TestReconcile(t *testing.T) {
 			WantStatusUpdates: []clientgotesting.UpdateActionImpl{{
 				Object: kpa(testNamespace, testRevision,
 					WithNoTraffic("Failed", "The target failed."),
-					withScales(0, 0),
 					WithReachabilityUnreachable,
 					WithPAMetricsService(privateSvc),
 					WithObservedGeneration(1),
 					WithPAStatusService(testRevision),
 					WithPASKSReady,
+					withScales(0, 0),
 					// WithPASKSNotReady(""),
 				),
 			}},
