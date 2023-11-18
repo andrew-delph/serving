@@ -1257,6 +1257,13 @@ func TestReconcile(t *testing.T) {
 					WithPASKSNotReady(""),
 				),
 			}},
+			WantPatches: []clientgotesting.PatchActionImpl{{
+				ActionImpl: clientgotesting.ActionImpl{
+					Namespace: testNamespace,
+				},
+				Name:  deployName,
+				Patch: []byte(`[{"op":"replace","path":"/spec/replicas","value":0}]`),
+			}},
 		},
 		// {
 		// 	Name: "ANDREW - test reachable scale to 0",
