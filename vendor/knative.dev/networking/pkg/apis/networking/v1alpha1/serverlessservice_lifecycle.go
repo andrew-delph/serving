@@ -27,7 +27,6 @@ import (
 
 var serverlessServiceCondSet = apis.NewLivingConditionSet(
 	ServerlessServiceConditionEndspointsPopulated,
-	ActivatorEndpointsPopulated,
 )
 
 // GetConditionSet retrieves the condition set for this resource. Implements the KRShaped interface.
