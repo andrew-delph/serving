@@ -50,6 +50,7 @@ import (
 
 	netcfg "knative.dev/networking/pkg/config"
 	"knative.dev/pkg/apis"
+	_ "knative.dev/pkg/client/injection/kube/informers/core/v1/pod/fake"
 	"knative.dev/pkg/configmap"
 	"knative.dev/pkg/controller"
 	"knative.dev/pkg/kmeta"
