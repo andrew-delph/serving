@@ -479,7 +479,7 @@ func TestReconcile(t *testing.T) {
 		Objects: []runtime.Object{
 			Revision("foo", "deploy-replicaset-failure",
 				WithLogURL, MarkActivating("Deploying", ""),
-				WithRoutingState(v1.RoutingStatePending, fc),
+				WithRoutingState(v1.RoutingStateActive, fc),
 				withDefaultContainerStatuses(),
 				WithRevisionObservedGeneration(1),
 				MarkContainerHealthyUnknown("Deploying"),
@@ -492,7 +492,7 @@ func TestReconcile(t *testing.T) {
 			Object: Revision("foo", "deploy-replicaset-failure",
 				WithLogURL, MarkResourcesUnavailable("FailedCreate", "I ReplicaSet failed!"),
 				withDefaultContainerStatuses(),
-				WithRoutingState(v1.RoutingStatePending, fc),
+				WithRoutingState(v1.RoutingStateActive, fc),
 				MarkContainerHealthyUnknown("Deploying"),
 				WithRevisionObservedGeneration(1),
 				MarkActivating("Deploying", ""),
