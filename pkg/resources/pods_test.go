@@ -293,7 +293,7 @@ func pod(name string, pos ...podOption) *corev1.Pod {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: testNamespace,
-			Labels:    map[string]string{serving.RevisionLabelKey: testRevision},
+			Labels:    map[string]string{serving.RevisionLabelKey: testRevision, serving.RevisionUID: testRevision},
 		},
 		Status: corev1.PodStatus{
 			Phase: corev1.PodRunning,

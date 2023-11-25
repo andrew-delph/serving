@@ -241,12 +241,17 @@ func uniScalerFactoryFunc(podLister corev1listers.PodLister,
 		if revisionName == "" {
 			return nil, fmt.Errorf("label %q not found or empty in Decider %s", serving.RevisionLabelKey, decider.Name)
 		}
+
+		revisionUID := decider.Labels[serving.RevisionUID]
+		if revisionName == "" {
+			return nil, fmt.Errorf("label %q not found or empty in Decider %s", serving.RevisionUID, decider.Name)
+		}
 		serviceName := decider.Labels[serving.ServiceLabelKey] // This can be empty.
 
 		// Create a stats reporter which tags statistics by PA namespace, configuration name, and PA name.
 		ctx := smetrics.RevisionContext(decider.Namespace, serviceName, configName, revisionName)
 
-		podAccessor := resources.NewPodAccessor(podLister, decider.Namespace, revisionName)
+		podAccessor := resources.NewPodAccessor(podLister, decider.Namespace, revisionUID)
 		return scaling.New(ctx, decider.Namespace, decider.Name, metricClient,
 			podAccessor, &decider.Spec), nil
 	}
@@ -263,7 +268,12 @@ func statsScraperFactoryFunc(podLister corev1listers.PodLister, usePassthroughLb
 			return nil, fmt.Errorf("label %q not found or empty in Metric %s", serving.RevisionLabelKey, metric.Name)
 		}
 
-		podAccessor := resources.NewPodAccessor(podLister, metric.Namespace, revisionName)
+		revisionUID := metric.Labels[serving.RevisionUID]
+		if revisionName == "" {
+			return nil, fmt.Errorf("label %q not found or empty in Metric %s", serving.RevisionUID, metric.Name)
+		}
+
+		podAccessor := resources.NewPodAccessor(podLister, metric.Namespace, revisionUID)
 		return asmetrics.NewStatsScraper(metric, revisionName, podAccessor, usePassthroughLb, meshMode, logger), nil
 	}
 }
