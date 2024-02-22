@@ -267,27 +267,7 @@ func computeActiveCondition(ctx context.Context, pa *autoscalingv1alpha1.PodAuto
 	case pa.Status.IsInactive():
 		computeActiveConditionFromActivating(ctx, pa, pc)
 	default:
-		minReady := activeThreshold(ctx, pa)
-		if pc.ready >= minReady && pa.Status.ServiceName != "" {
-			pa.Status.MarkScaleTargetInitialized()
-		}
-		//	| Want | Got    | min   | Status     | New status |
-		//	| 0    | <any>  | <any> | <any>      | inactive   |
-		//	| >0   | < min  | <any> | <any>      | activating |
-		//	| >0   | >= min | <any> | <any>      | active     |
-		if pc.want == 0 || minReady == 0 {
-			if minReady > 0 {
-				pa.Status.MarkInactive("TimedOut", "The target could not be activated.")
-			} else {
-				pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
-			}
-		} else if pc.ready < minReady {
-			pa.Status.MarkActivating(
-				"Queued", "Requests to the target are being buffered as resources are provisioned.")
-		} else {
-			pa.Status.MarkActive()
-		}
-
+		computeActiveConditionFromUnknown(ctx, pa, pc)
 	}
 }
 
@@ -308,6 +288,7 @@ func computeActiveConditionFromActive(ctx context.Context, pa *autoscalingv1alph
 		}
 
 	case pc.ready < minReady:
+
 		if pc.want > 0 || !pa.Status.IsInactive() {
 			pa.Status.MarkActivating(
 				"Queued", "Requests to the target are being buffered as resources are provisioned.")
@@ -371,37 +352,45 @@ func computeActiveConditionFromActivating(ctx context.Context, pa *autoscalingv1
 		pa.Status.MarkScaleTargetInitialized()
 	}
 
+	//	| Want | Got    | min   | Status     | New status |
+	//	| -1   | < min  | <any> | activating | activating |
+	//	| -1   | >= min | 0     | activating | inactive   |
+	//	| -1   | >= min | >0    | activating | active     |
+
 	switch {
 	// Need to check for minReady = 0 because in the initialScale 0 case, pc.want will be -1.
 	case pc.want == 0 || minReady == 0:
-		if pa.Status.IsActivating() && minReady > 0 {
-			// We only ever scale to zero while activating if we fail to activate within the progress deadline.
+		pa.Status.MarkInactive("TimedOut", "The target could not be activated.")
+
+	case pc.ready < minReady:
+		pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
+
+	case pc.ready >= minReady:
+		pa.Status.MarkActive()
+	}
+}
+
+func computeActiveConditionFromUnknown(ctx context.Context, pa *autoscalingv1alpha1.PodAutoscaler, pc podCounts) {
+	minReady := activeThreshold(ctx, pa)
+	if pc.ready >= minReady && pa.Status.ServiceName != "" {
+		pa.Status.MarkScaleTargetInitialized()
+	}
+	//	| Want | Got    | min   | Status     | New status |
+	//	| 0    | <any>  | <any> | <any>      | inactive   |
+	//	| >0   | < min  | <any> | <any>      | activating |
+	//	| >0   | >= min | <any> | <any>      | active     |
+	if pc.want == 0 || minReady == 0 {
+		if minReady > 0 {
 			pa.Status.MarkInactive("TimedOut", "The target could not be activated.")
 		} else {
 			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
 		}
-
-	case pc.ready < minReady:
-		if pc.want > 0 || !pa.Status.IsInactive() {
-			pa.Status.MarkActivating(
-				"Queued", "Requests to the target are being buffered as resources are provisioned.")
-		} else {
-			// This is for the initialScale 0 case. In the first iteration, minReady is 0,
-			// but for the following iterations, minReady is 1. pc.want will continue being
-			// -1 until we start receiving metrics, so we will end up here.
-			// Even though PA is already been marked as inactive in the first iteration, we
-			// still need to set it again. Otherwise reconciliation will fail with NewObservedGenFailure
-			// because we cannot go through one iteration of reconciliation without setting
-			// some status.
-			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
-		}
-
-	case pc.ready >= minReady:
-		if pc.want > 0 || !pa.Status.IsInactive() {
-			pa.Status.MarkActive()
-		}
+	} else if pc.ready < minReady {
+		pa.Status.MarkActivating(
+			"Queued", "Requests to the target are being buffered as resources are provisioned.")
+	} else {
+		pa.Status.MarkActive()
 	}
-
 }
 
 // activeThreshold returns the scale required for the pa to be marked Active
