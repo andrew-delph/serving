@@ -284,33 +284,14 @@ func computeActiveConditionFromActive(ctx context.Context, pa *autoscalingv1alph
 	switch {
 	// Need to check for minReady = 0 because in the initialScale 0 case, pc.want will be -1.
 	case pc.want == 0 || minReady == 0:
-		if pa.Status.IsActivating() && minReady > 0 {
-			// We only ever scale to zero while activating if we fail to activate within the progress deadline.
-			pa.Status.MarkInactive("TimedOut", "The target could not be activated.")
-		} else {
-			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
-		}
+		pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
 
 	case pc.ready < minReady:
-
-		if pc.want > 0 || !pa.Status.IsInactive() {
-			pa.Status.MarkActivating(
-				"Queued", "Requests to the target are being buffered as resources are provisioned.")
-		} else {
-			// This is for the initialScale 0 case. In the first iteration, minReady is 0,
-			// but for the following iterations, minReady is 1. pc.want will continue being
-			// -1 until we start receiving metrics, so we will end up here.
-			// Even though PA is already been marked as inactive in the first iteration, we
-			// still need to set it again. Otherwise reconciliation will fail with NewObservedGenFailure
-			// because we cannot go through one iteration of reconciliation without setting
-			// some status.
-			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
-		}
+		pa.Status.MarkActivating(
+			"Queued", "Requests to the target are being buffered as resources are provisioned.")
 
 	case pc.ready >= minReady:
-		if pc.want > 0 || !pa.Status.IsInactive() {
-			pa.Status.MarkActive()
-		}
+		pa.Status.MarkActive()
 	}
 }
 
