@@ -309,6 +309,7 @@ func computeActiveConditionFromInactive(ctx context.Context, pa *autoscalingv1al
 			pa.Status.MarkActivating(
 				"Queued", "Requests to the target are being buffered as resources are provisioned.")
 		} else {
+			// TODO: This case doesnt happen and need to be looked into.
 			pa.Status.MarkInactive(noTrafficReason, "The target is not receiving traffic.")
 		}
 
